@@ -4,6 +4,10 @@ import cspbase
 from propagators import *
 from futoshiki_csp import *
 
+
+
+
+
 #Now n-Queens example
 def queensCheck(qi, qj, i, j):
     '''Return true if i and j can be assigned to the queen in row qi and row qj 
@@ -96,7 +100,7 @@ def test_model():
         print("Failed first model test: wrong solution")
     else:
         solver = BT(csp)
-        solver.bt_search(prop_BT)
+        solver.bt_search(prop_GAC)
         sol = []
         for i in range(len(var_array)):
             for j in range(len(var_array)):
@@ -106,12 +110,12 @@ def test_model():
         else:
             print("Failed first model test: wrong solution")
     #2nd model test
-    csp2, var_array2 = futoshiki_csp_model_2(board_2)
+    csp2, var_array2 = futoshiki_csp_model_1(board_2)
     if csp2 is None:
         print("Failed second model test: wrong solution")
     else:    
         solver = BT(csp2)
-        solver.bt_search(prop_BT)
+        solver.bt_search(prop_GAC)
         for i in range(len(var_array2)):
             for j in range(len(var_array2)):
                  if var_array2[i][j].get_assigned_value() is not None:
@@ -258,12 +262,12 @@ def three_queen_FC():
     return score,details
 
 if __name__ == "__main__":
-    _test_model_ = True 
+    _test_model_ = True
     _test_ord_mrv_ = True
     _test_simple_FC_ = True
-    _test_simple_GAC_ = True 
-    _three_queen_FC_ = True 
-    _three_queen_GAC_ = True 
+    _test_simple_GAC_ = True
+    _three_queen_FC_ = True
+    _three_queen_GAC_ = True
  
     #trace = True
     trace = False

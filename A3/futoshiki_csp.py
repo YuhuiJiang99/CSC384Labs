@@ -58,12 +58,11 @@ def futoshiki_csp_model_1(futo_grid):
                 dom2 = var2.cur_domain()
                 con = Constraint(f"Con(Var{i}{j},Var{i}{k})", [var1, var2])
                 if k == j+1:
-                    binary_tups = create_binary_tuples(futo_grid[i][j], dom1, dom2)
+                    binary_tups = create_binary_tuples(futo_grid[i][j*2+1], dom1, dom2)
                 else:
                     binary_tups = create_binary_tuples('.', dom1, dom2)
                 con.add_satisfying_tuples(binary_tups)
                 cons.append(con)
-
 
                 var1 = var_matrix[j][i]
                 dom1 = var1.cur_domain()
@@ -73,7 +72,6 @@ def futoshiki_csp_model_1(futo_grid):
                 con = Constraint(f"Con(Var{j}{i},Var{k}{i})", [var1, var2])
                 con.add_satisfying_tuples(binary_tups)
                 cons.append(con)
-    
     csp_model1 = CSP(f"size {height} model 1 csp", csp_vars)
     for c in cons:  
         csp_model1.add_constraint(c)
@@ -104,11 +102,12 @@ def futoshiki_csp_model_2(futo_grid):
     
     #Create and append all constraints in the futo_grid into cons
     for i in range(0, height):
-        vars_row = var_matrix[i]
+        vars_row = []
         doms_row = []
         vars_col = []
         doms_col= []
         for j in range(0, height):
+            vars_row.append(var_matrix[i][j])
             doms_row.append(var_matrix[i][j].cur_domain())
             vars_col.append(var_matrix[j][i])
             doms_col.append(var_matrix[j][i].cur_domain())
@@ -116,7 +115,7 @@ def futoshiki_csp_model_2(futo_grid):
                 var1 = var_matrix[i][j]
                 dom1 = var1.cur_domain()
                 var2 = var_matrix[i][j+1]
-                dom2 = var1.cur_domain()
+                dom2 = var2.cur_domain()
                 binary_tups = create_binary_tuples(futo_grid[i][j*2+1], dom1, dom2)
                 con = Constraint(f"Con(Var{i}{j},Var{i}{j+1})", [var1, var2])
                 con.add_satisfying_tuples(binary_tups)
@@ -133,7 +132,7 @@ def futoshiki_csp_model_2(futo_grid):
         con.add_satisfying_tuples(col_nary_tups)
         cons.append(con)
 
-    csp_model2 = CSP("size {height} model 2 futoshiki", csp_vars)
+    csp_model2 = CSP(f"size {height} model 2 futoshiki", csp_vars)
     for c in cons:
         csp_model2.add_constraint(c)
 
@@ -154,10 +153,10 @@ def create_nary_tuples(doms):
     return nary_tuples
 
 def ineq(ineqOp, v1, v2):
-    if ineqOp == '>':
+    if ineqOp == '<':
+        return v1 < v2
+    elif ineqOp == '>':
         return v1 > v2
-    elif ineqOp == '<':
-        return v1 <= v2
     else:
         return v1 != v2
 
@@ -166,6 +165,6 @@ def ineq(ineqOp, v1, v2):
 
 
    
-board_1 = [[1,'<',0,'.',0],[0,'.',0,'.',2],[2,'.',0,'>',0]]
-sp, var_array = futoshiki_csp_model_2(board_1)
+# board_1 = [[1,'<',0,'.',0],[0,'.',0,'.',2],[2,'.',0,'>',0]]
+# sp, var_array = futoshiki_csp_model_2(board_1)
 

@@ -126,10 +126,7 @@ def prop_GAC(csp, newVar=None):
         GACqueue = csp.get_all_cons()
     else:
         GACqueue = csp.get_cons_with_var(newVar)
-        for val in newVar.cur_domain():
-            if val != newVar.get_assigned_value():
-                newVar.prune_value(val) 
-                prunedPairs.append((newVar, val))
+
     while len(GACqueue) != 0:
         con = GACqueue.pop(0)
         for var in con.get_scope():
