@@ -2,11 +2,10 @@
 
 import os
 import sys
+from typing import Collection
 
 import numpy as np
 from collections import Counter
-
-from numpy.lib.function_base import blackman
 
 UNIVERSAL_TAGS = [
     "VERB",
@@ -24,8 +23,6 @@ UNIVERSAL_TAGS = [
 ]
 
 N_tags = len(UNIVERSAL_TAGS)
-
-tag2count = dict()
 
 def read_data_train(path):
     return [tuple(line.split(' : ')) for line in open(path, 'r').read().split('\n')[:-1]]
@@ -54,11 +51,11 @@ def train_HMM(train_file_name):
                             - Each entry corresponds to the prior log probability of seeing the i'th tag in UNIVERSAL_TAGS at the beginning of a sequence
                             - i.e. prior[i] = log P(tag_i)
 
-            - transition:   - transition 2D-array of size (N_tags, N_tags)
+            - transition:   - A 2D-array of size (N_tags, N_tags)
                             - The (i,j)'th entry stores the log probablity of seeing the j'th tag given it is a transition coming from the i'th tag in UNIVERSAL_TAGS
                             - i.e. transition[i, j] = log P(tag_j|tag_i)
 
-            - emission:     - transition dictionary type containing tuples of (str, str) as keys
+            - emission:     - A dictionary type containing tuples of (str, str) as keys
                             - Each key in the dictionary refers to a (TAG, WORD) pair
                             - The TAG must be an element of UNIVERSAL_TAGS, however the WORD can be anything that appears in the training data
                             - The value corresponding to the (TAG, WORD) key pair is the log probability of observing WORD given a TAG
@@ -74,13 +71,12 @@ def train_HMM(train_file_name):
     # STUDENT CODE HERE
     ####################  
     sent_inds = set(sent_inds)
-    prior = [0.1**10]*N_tags #Put a extremely small number for each position
+    prior = [0]*N_tags #Put a extremely small number for each position
     transition = []
     emission = dict()
     tag2idx = dict()
-    global tag2count
-
-
+    tag2count = dict()
+  
     #initialize the tag2idx dict
     for i in range(N_tags):
         tag2idx[UNIVERSAL_TAGS[i]] = i
@@ -88,13 +84,14 @@ def train_HMM(train_file_name):
     #initialize the transition table
     for i in range(N_tags):
         transition.append([0]*N_tags)
+
     #traverse the pos_data and fill in different tables
     count = 0
     for i in range(0, len(pos_data)):
         word = pos_data[i][0]
         tag = pos_data[i][1]
         idx = tag2idx[tag]
-        if tag in tag2count:
+        if tag in tag2count.keys():
             tag2count[tag] += 1
         else:
             tag2count[tag] = 1
@@ -103,101 +100,92 @@ def train_HMM(train_file_name):
             count += 1
             prior[idx] += 1
 
+        
         #add to emission table
-        if (tag, word) in emission:
+        if (tag, word) in emission.keys():
             emission[(tag, word)] += 1
         else:
             emission[(tag, word)] = 1
             
         #add to transition table
         if i < len(pos_data)-1:
-            if i+1 not in sent_inds:
-                nextTag = pos_data[i+1][1]
-                nextIdx = tag2idx[nextTag]
-                transition[idx][nextIdx] += 1
-
+            nextTag = pos_data[i+1][1]
+            nextIdx = tag2idx[nextTag]
+            transition[idx][nextIdx] += 1
 
     #set up the prior, transition, emission tables
-    prior = [c/len(sent_inds) for c in prior]
+    print(tag2count)
+    prior = [np.log(c/len(sent_inds)) for c in prior]
     for i in range(N_tags):
         rowSum = sum(transition[i]) 
+        rowSum =  tag2count[UNIVERSAL_TAGS[i]]
+
         for j in range(N_tags):
-            transition[i][j] = transition[i][j]/rowSum
+            if transition[i][j] == 0:
+                transition[i][j] = float('-inf')
+            else:
+                transition[i][j] = np.log(transition[i][j]/rowSum)
     for k in emission.keys():
         emission[k] = np.log(emission[k]/tag2count[k[0]])
+    
+    
 
-    prior = np.log(prior)
-    transition = np.log(transition)
+    prior = np.asarray(prior)
+    transition = np.asarray(transition)
     return prior, transition, emission
     
+
 def tag(train_file_name, test_file_name):
     """
     Train your HMM model, run it on the test data, and finally output the tags.
 
     Your code should write the output tags to (test_file_name).pred, where each line contains a POS tag as in UNIVERSAL_TAGS
     """
-    results = []
-    prior, transition, emission = train_HMM(train_file_name)
 
+    prior, transition, emission = train_HMM(train_file_name)
 
     pos_data = read_data_test(test_file_name+'.txt')
     sent_inds = read_data_ind(test_file_name+'.ind')
+
     ####################
     # STUDENT CODE HERE
     ####################
-    for i in range(len(sent_inds)):
-        a = sent_inds[i]
-        if i < len(sent_inds)-1:
-            b = sent_inds[i+1]
-        else:
-            b = len(pos_data)
-        prob_trellis, path_trellis = viterbi(pos_data[a:b], UNIVERSAL_TAGS, prior, transition, emission)
-        max_row = np.argmax(prob_trellis, axis=0)[-1]
-        path = path_trellis[max_row][-1]
-        results += path
-        # probCol = [prob_trellis[i][b-a-1] for i in range(len(UNIVERSAL_TAGS))]
+
     write_results(test_file_name+'.pred', results)
 
-def viterbi(O, S, prior, transition, emission):
-    # prob_trellis = np.array([ [0]*len(O) for i in range(len(S))])
-    # path_trellis = np.array([ [""]*len(O) for i in range(len(S))])
-    # prior = np.exp(prior)
-    # transition = np.exp(transition)
-    # transition[transition==-np.inf] = np.log(0.1**10)
-
-    # for k in emission.keys():
-    #     emission[k] = np.exp(emission[k])
-
-    prob_trellis = np.zeros([len(S), len(O)])
-    path_trellis = np.empty([len(S), len(O)], dtype=object)
-    # Determine trellis values for X1
-    for s in range(len(S)):
-        if (S[s], O[0]) not in emission:
-            emission[(S[s], O[0])] = np.log(0.1**10)
-        prob_trellis[s,0] = prior[s] + emission[(S[s], O[0])]
-
-        path_trellis[s,0] = [S[s]]
-    # For X2-XT find each current state's most likely prior state x.
-    for o in range(1, len(O)):
-        for s in range(len(S)):
-            arr = [prob_trellis[x, o-1] + transition[x,s] for x in range(N_tags)]
-            x = np.argmax(arr)
-            if (S[s],O[o]) not in emission:
-                emission[(S[s],O[o])] = np.log(0.1**10)
-            prob_trellis[s,o] = prob_trellis[x, o-1] + transition[x,s] + emission[(S[s],O[o])] 
-            path_trellis[s,o] = path_trellis[x, o-1] + [S[s]]
-    return prob_trellis, path_trellis
 
 
 if __name__ == '__main__':
-    # Run the tagger function.
-    print("Starting the tagging process.")
+    # train_file_name = "./data/train-public"
+    # prior, transition, emission = train_HMM(train_file_name)
+    # matrix = [[1,2,3],[4,5,6]]
+    # for arr in matrix:
+    #     print(type(arr))
 
-    # Tagger expects the input call: "python3 tagger.py -d <training file> -t <test file>"
-    # E.g. python3 tagger.py -d data/train-public -t data/test-public-small
-    parameters = sys.argv
-    train_file_name = parameters[parameters.index("-d")+1]
-    test_file_name = parameters[parameters.index("-t")+1]
+    # matrix = np.array(matrix)
 
-    # Start the training and tagging operation.
-    tag(train_file_name, test_file_name)
+    # for arr in matrix:
+    #     print(type(arr))
+    
+    # print(matrix[0,1])
+
+        
+    an_array = np.array([[0.1, 0.0, 0.3], [0.1, 0.0, 0.1]])
+    an_array[an_array==0] = 0.1**10
+
+    # i = np.argmax(an_array, axis=0)[-1]
+    # print(an_array[i][-1])
+
+    arr = [1,2,3,4]
+    arr2 = [1,2,3,4]
+    print(np.argmax(arr))
+    print(np.argmax(np.log(arr)))
+
+
+
+
+
+
+
+
+

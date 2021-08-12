@@ -1,0 +1,4 @@
+How to check new sentence
+Hi, I just notice that the instruction encourages us to use a list(sent_inds) to check if a word is at the beggining of a sentence. But if we do this check for every word in the
+
+pos_data, then I'm concerned about the time complexity it will take(probably O(mn)). Can we just use another idea like "check if the previous word is '.'" to determine if a word is at the beginning of a sentence? The problem of this idea is that I'm not sure if the test datasets will have corner cases that '.' is not used as the end of a sentence.
