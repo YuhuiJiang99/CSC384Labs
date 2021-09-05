@@ -1,5 +1,4 @@
 # The tagger.py starter code for CSC384 A4.
-
 import os
 import sys
 
