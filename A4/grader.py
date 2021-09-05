@@ -11,6 +11,7 @@ def test_tagging(test_file):
     soln = np.asarray(read_data_test(test_file+'.soln')[:-1])
 
     acc = np.sum(pred==soln) / len(soln)
+    print(acc)
     pct = min(acc, tagging_threshold) / tagging_threshold
 
     return pct

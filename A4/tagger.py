@@ -79,12 +79,9 @@ def train_HMM(train_file_name):
     emission = dict()
     tag2idx = dict()
     global tag2count
-
-
     #initialize the tag2idx dict
     for i in range(N_tags):
         tag2idx[UNIVERSAL_TAGS[i]] = i
-    
     #initialize the transition table
     for i in range(N_tags):
         transition.append([0]*N_tags)
@@ -104,6 +101,7 @@ def train_HMM(train_file_name):
             prior[idx] += 1
 
         #add to emission table
+        
         if (tag, word) in emission:
             emission[(tag, word)] += 1
         else:
@@ -115,7 +113,6 @@ def train_HMM(train_file_name):
                 nextTag = pos_data[i+1][1]
                 nextIdx = tag2idx[nextTag]
                 transition[idx][nextIdx] += 1
-
 
     #set up the prior, transition, emission tables
     prior = [c/len(sent_inds) for c in prior]
@@ -138,54 +135,38 @@ def tag(train_file_name, test_file_name):
     """
     results = []
     prior, transition, emission = train_HMM(train_file_name)
-
-
     pos_data = read_data_test(test_file_name+'.txt')
     sent_inds = read_data_ind(test_file_name+'.ind')
     ####################
     # STUDENT CODE HERE
     ####################
     for i in range(len(sent_inds)):
-        a = sent_inds[i]
+        start = sent_inds[i]
         if i < len(sent_inds)-1:
-            b = sent_inds[i+1]
+            end = sent_inds[i+1]
         else:
-            b = len(pos_data)
-        prob_trellis, path_trellis = viterbi(pos_data[a:b], UNIVERSAL_TAGS, prior, transition, emission)
-        max_row = np.argmax(prob_trellis, axis=0)[-1]
+            end = len(pos_data)
+        prob_trellis, path_trellis = viterbi(pos_data[start:end], UNIVERSAL_TAGS, prior, transition, emission)
+        max_row = np.argmax(prob_trellis[:, -1])
         path = path_trellis[max_row][-1]
         results += path
-        # probCol = [prob_trellis[i][b-a-1] for i in range(len(UNIVERSAL_TAGS))]
     write_results(test_file_name+'.pred', results)
 
-def viterbi(O, S, prior, transition, emission):
-    # prob_trellis = np.array([ [0]*len(O) for i in range(len(S))])
-    # path_trellis = np.array([ [""]*len(O) for i in range(len(S))])
-    # prior = np.exp(prior)
-    # transition = np.exp(transition)
-    # transition[transition==-np.inf] = np.log(0.1**10)
-
-    # for k in emission.keys():
-    #     emission[k] = np.exp(emission[k])
-
-    prob_trellis = np.zeros([len(S), len(O)])
-    path_trellis = np.empty([len(S), len(O)], dtype=object)
-    # Determine trellis values for X1
-    for s in range(len(S)):
-        if (S[s], O[0]) not in emission:
-            emission[(S[s], O[0])] = np.log(0.1**10)
-        prob_trellis[s,0] = prior[s] + emission[(S[s], O[0])]
-
-        path_trellis[s,0] = [S[s]]
-    # For X2-XT find each current state's most likely prior state x.
-    for o in range(1, len(O)):
-        for s in range(len(S)):
-            arr = [prob_trellis[x, o-1] + transition[x,s] for x in range(N_tags)]
-            x = np.argmax(arr)
-            if (S[s],O[o]) not in emission:
-                emission[(S[s],O[o])] = np.log(0.1**10)
-            prob_trellis[s,o] = prob_trellis[x, o-1] + transition[x,s] + emission[(S[s],O[o])] 
-            path_trellis[s,o] = path_trellis[x, o-1] + [S[s]]
+def viterbi(words, tags, prior, transition, emission):
+    prob_trellis = np.zeros([len(tags), len(words)])
+    path_trellis = np.empty([len(tags), len(words)], dtype=object)
+    for t in range(len(tags)):
+        if (tags[t], words[0]) not in emission:
+            emission[(tags[t], words[0])] = np.log(0.1**10)
+        prob_trellis[t,0] = prior[t] + emission[(tags[t], words[0])]
+        path_trellis[t,0] = [tags[t]]
+    for w in range(1, len(words)):
+        for t in range(len(tags)):
+            if (tags[t],words[w]) not in emission:
+                emission[(tags[t],words[w])] = np.log(0.1**10)
+            x = np.argmax(prob_trellis[:, w-1] + transition[:, t])
+            prob_trellis[t,w] = prob_trellis[x, w-1] + transition[x,t] + emission[(tags[t],words[w])] 
+            path_trellis[t,w] = path_trellis[x, w-1] + [tags[t]]
     return prob_trellis, path_trellis
 
 
